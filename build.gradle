@@ -1,0 +1,45 @@
+plugins {
+    id "com.marklogic.ml-gradle" version "2.3.4"
+    id "java"
+    id "application"
+}
+
+group 'com.marklogic.spring.batch'
+version '1.0-SNAPSHOT'
+
+sourceCompatibility = 1.7
+
+ext {
+    msbVersion = '0.7.4'
+}
+
+repositories {
+    jcenter()
+    mavenCentral()
+    maven { url "http://developer.marklogic.com/maven2" }
+    mavenLocal()
+}
+
+dependencies {
+    compile "com.marklogic:java-client-api:4.0.0-EA3"
+    compile "com.marklogic:marklogic-spring-batch-core:" + msbVersion
+    compile "org.slf4j:slf4j-api:1.7.21"
+
+    testCompile "com.marklogic:marklogic-spring-batch-test:" + msbVersion
+    testCompile group: 'junit', name: 'junit', version: '4.11'
+
+    runtime "com.marklogic:marklogic-spring-batch-core:" + msbVersion
+    runtime "org.hsqldb:hsqldb:2.3.4"
+}
+
+mainClassName = "com.marklogic.spring.batch.Main"
+
+task runManager(type: JavaExec) {
+    classpath = configurations.runtime
+    main = "org.hsqldb.util.DatabaseManagerSwing"
+    args = [
+            "--driver", "org.hsqldb.jdbc.JDBCDriver",
+            "--url", "jdbc:hsqldb:file:data/invoices",
+            "--user", "SA"
+    ]
+}
