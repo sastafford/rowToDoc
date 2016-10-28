@@ -3,6 +3,7 @@ package com.marklogic.spring.batch.config;
 import com.marklogic.client.document.DocumentWriteOperation;
 import com.marklogic.client.helper.DatabaseClientProvider;
 import com.marklogic.client.io.DocumentMetadataHandle;
+import com.marklogic.client.io.Format;
 import com.marklogic.spring.batch.Options;
 import com.marklogic.spring.batch.columnmap.JsonColumnMapSerializer;
 import com.marklogic.spring.batch.item.PathAwareColumnMapProcessor;
@@ -90,7 +91,7 @@ public class RowToDoc implements OptionParserConfigurer {
             for (int i = 0; i < params.length; i += 2) {
                 paramsMap.put(params[i], params[i + 1]);
             }
-            //itemWriter.setTransform(Format.valueOf(format.toUpperCase()), transformName, paramsMap);
+            writer.setTransform(Format.valueOf(format.toUpperCase()), transformName, paramsMap);
         }
         writer.setMetadata(metadata);
 
