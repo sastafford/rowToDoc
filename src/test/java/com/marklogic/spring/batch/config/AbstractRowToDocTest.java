@@ -22,7 +22,7 @@ public abstract class AbstractRowToDocTest extends AbstractJobTest {
 
     protected ClientTestHelper clientTestHelper = new ClientTestHelper();
 
-    public void teardown() {
+    public void shutdownInMemoryDatabase() {
         if (embeddedDatabase != null) {
             embeddedDatabase.shutdown();
         }
@@ -60,6 +60,10 @@ public abstract class AbstractRowToDocTest extends AbstractJobTest {
 
     }
 
+    /**
+     * With our embedded HSQL database, there's not a way that I know of for building a JDBC connection string for it.
+     * So we override this method in the config class that we're testing to inject our own data source.
+     */
     @Configuration
     public static class RowToDocTest extends RowToDoc {
         @Override

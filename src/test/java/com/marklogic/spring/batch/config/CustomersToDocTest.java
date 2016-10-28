@@ -52,10 +52,7 @@ public class CustomersToDocTest extends AbstractRowToDocTest {
 
     @After
     public void teardown() {
-        if (embeddedDatabase != null) {
-            embeddedDatabase.shutdown();
-        }
-        embeddedDatabase = null;
+        shutdownInMemoryDatabase();
         transMgr.deleteTransform("simple");
     }
 
