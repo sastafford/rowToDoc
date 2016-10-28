@@ -45,13 +45,13 @@ public class CustomersToDocTest extends AbstractRowToDocTest {
         createInMemoryDatabase("db/sampledata_ddl.sql", "db/sampledata_insert.sql");
 
         clientTestHelper.setDatabaseClientProvider(getClientProvider());
-/*
+
         Resource transform = getApplicationContext().getResource("classpath:/transforms/simple.xqy");
         transMgr = getClient().newServerConfigManager().newTransformExtensionsManager();
         FileHandle fileHandle = new FileHandle(transform.getFile());
         fileHandle.setFormat(Format.XML);
         transMgr.writeXQueryTransform("simple", fileHandle);
-  */
+
     }
 
     @After
@@ -60,7 +60,7 @@ public class CustomersToDocTest extends AbstractRowToDocTest {
             embeddedDatabase.shutdown();
         }
         embeddedDatabase = null;
-//        transMgr.deleteTransform("simple");
+        transMgr.deleteTransform("simple");
     }
 
     @Test

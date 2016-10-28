@@ -3,12 +3,15 @@ package com.marklogic.spring.batch.item;
 import com.marklogic.client.DatabaseClient;
 import com.marklogic.client.document.DocumentWriteSet;
 import com.marklogic.client.document.GenericDocumentManager;
+import com.marklogic.client.io.DocumentMetadataHandle;
 import com.marklogic.client.io.StringHandle;
 import com.marklogic.spring.batch.columnmap.ColumnMapMerger;
 import com.marklogic.spring.batch.columnmap.ColumnMapSerializer;
 import com.marklogic.spring.batch.columnmap.DefaultColumnMapMerger;
 import com.marklogic.spring.batch.columnmap.DefaultStaxColumnMapSerializer;
 import com.marklogic.spring.batch.item.AbstractDocumentWriter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemStream;
 import org.springframework.batch.item.ItemStreamException;
@@ -23,12 +26,20 @@ import java.util.*;
  * <li>Provide a strategy interface for generating XML element names based on column names.</li>
  * </ol>
  */
-public class ColumnMapItemWriter extends AbstractDocumentWriter implements ItemWriter<Map<String, Object>>, ItemStream {
+public class ColumnMapItemWriter implements ItemWriter<Map<String, Object>>, ItemStream {
+
+    protected final Logger logger = LoggerFactory.getLogger(getClass());
 
     // Configurable
     private ColumnMapSerializer columnMapSerializer;
     private ColumnMapMerger columnMapMerger;
     private String rootElementName;
+
+    public void setMetadata(DocumentMetadataHandle metadata) {
+        this.metadata = metadata;
+    }
+
+    private DocumentMetadataHandle metadata;
 
     // Internal state
     private GenericDocumentManager mgr;
@@ -75,7 +86,7 @@ public class ColumnMapItemWriter extends AbstractDocumentWriter implements ItemW
                     }
                     String content = columnMapSerializer.serializeColumnMap(columnMap, this.rootElementName, null);
                     String uri = generateUri(content, id);
-                    set.add(uri, buildMetadata(), new StringHandle(content));
+                    set.add(uri, metadata, new StringHandle(content));
                     if (logger.isDebugEnabled()) {
                         logger.debug("Writing URI: " + uri + "; content: " + content);
                     }
@@ -131,6 +142,11 @@ public class ColumnMapItemWriter extends AbstractDocumentWriter implements ItemW
         if (columnMapMerger == null) {
             columnMapMerger = new DefaultColumnMapMerger();
         }
+    }
+
+    @Override
+    public void update(ExecutionContext executionContext) throws ItemStreamException {
+
     }
 
     /**

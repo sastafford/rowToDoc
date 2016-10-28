@@ -2,6 +2,7 @@ package com.marklogic.spring.batch.config;
 
 import com.marklogic.client.document.DocumentWriteOperation;
 import com.marklogic.client.helper.DatabaseClientProvider;
+import com.marklogic.client.io.DocumentMetadataHandle;
 import com.marklogic.spring.batch.Options;
 import com.marklogic.spring.batch.columnmap.JsonColumnMapSerializer;
 import com.marklogic.spring.batch.item.PathAwareColumnMapProcessor;
@@ -62,7 +63,7 @@ public class RowToDoc implements OptionParserConfigurer {
             @Value("#{jobParameters['format'] ?: 'xml'}") String format,
             @Value("#{jobParameters['root_local_name']}") String rootLocalName,
             @Value("#{jobParameters['collections']}") String[] collections,
-            @Value("#{jobParameters['transform_name']}") String transformName,
+            @Value("#{jobParameters['transform_name'] ?: ''}") String transformName,
             @Value("#{jobParameters['transform_parameters']}") String transformParameters) {
 
         DataSource dataSource = buildDataSource();
@@ -72,26 +73,26 @@ public class RowToDoc implements OptionParserConfigurer {
         reader.setRowMapper(new ColumnMapRowMapper());
         reader.setSql(sql);
 
-
         ColumnMapItemWriter writer = new ColumnMapItemWriter(databaseClientProvider.getDatabaseClient(), rootLocalName);
+        DocumentMetadataHandle metadata = new DocumentMetadataHandle();
         if (collections == null || collections.length == 0) {
             String[] coll = {rootLocalName};
-            writer.setCollections(coll);
+            metadata.withCollections(coll);
         } else {
-            writer.setCollections(collections);
+            metadata.withCollections(collections);
         }
         if ("json".equals(format)) {
             writer.setColumnMapSerializer(new JsonColumnMapSerializer());
         }
-        Map<String, String> paramsMap = new HashMap<String, String>();
-        if (transformParameters != null) {
+        if (!transformName.isEmpty()) {
+            Map<String, String> paramsMap = new HashMap<String, String>();
             String params[] = transformParameters.split(",");
             for (int i = 0; i < params.length; i += 2) {
                 paramsMap.put(params[i], params[i + 1]);
             }
             //itemWriter.setTransform(Format.valueOf(format.toUpperCase()), transformName, paramsMap);
         }
-
+        writer.setMetadata(metadata);
 
         return stepBuilderFactory.get("step1")
                 .<Map<String, Object>, Map<String, Object>>chunk(10)
