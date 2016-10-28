@@ -1,4 +1,4 @@
-package com.marklogic.spring.batch.columnmap;
+package com.marklogic.spring.batch.item;
 
 import com.marklogic.client.helper.LoggingObject;
 import org.springframework.batch.item.ItemProcessor;

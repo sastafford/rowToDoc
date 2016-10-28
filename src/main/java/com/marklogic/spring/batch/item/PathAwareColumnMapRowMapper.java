@@ -1,4 +1,4 @@
-package com.marklogic.spring.batch.config;
+package com.marklogic.spring.batch.item;
 
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.support.JdbcUtils;

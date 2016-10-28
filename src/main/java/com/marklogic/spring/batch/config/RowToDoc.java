@@ -2,11 +2,11 @@ package com.marklogic.spring.batch.config;
 
 import com.marklogic.client.document.DocumentWriteOperation;
 import com.marklogic.client.helper.DatabaseClientProvider;
-import com.marklogic.client.io.Format;
 import com.marklogic.spring.batch.Options;
 import com.marklogic.spring.batch.columnmap.JsonColumnMapSerializer;
+import com.marklogic.spring.batch.item.PathAwareColumnMapProcessor;
 import com.marklogic.spring.batch.config.support.OptionParserConfigurer;
-import com.marklogic.spring.batch.item.MarkLogicItemWriter;
+import com.marklogic.spring.batch.item.ColumnMapItemWriter;
 import joptsimple.OptionParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,6 +22,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.env.Environment;
+import org.springframework.jdbc.core.ColumnMapRowMapper;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 
 import javax.sql.DataSource;
@@ -68,31 +69,35 @@ public class RowToDoc implements OptionParserConfigurer {
 
         JdbcCursorItemReader<Map<String, Object>> reader = new JdbcCursorItemReader<>();
         reader.setDataSource(dataSource);
-        reader.setRowMapper(new PathAwareColumnMapRowMapper());
+        reader.setRowMapper(new ColumnMapRowMapper());
         reader.setSql(sql);
 
-        RowToDocItemProcessor itemProcessor = new RowToDocItemProcessor();
-        if ("json".equals(format.toLowerCase())) {
-            itemProcessor.setColumnMapSerializer(new JsonColumnMapSerializer());
-        }
-        itemProcessor.setRootElementName(rootLocalName);
-        itemProcessor.setCollections(collections);
 
-        MarkLogicItemWriter itemWriter = new MarkLogicItemWriter(databaseClientProvider.getDatabaseClient());
+        ColumnMapItemWriter writer = new ColumnMapItemWriter(databaseClientProvider.getDatabaseClient(), rootLocalName);
+        if (collections == null || collections.length == 0) {
+            String[] coll = {rootLocalName};
+            writer.setCollections(coll);
+        } else {
+            writer.setCollections(collections);
+        }
+        if ("json".equals(format)) {
+            writer.setColumnMapSerializer(new JsonColumnMapSerializer());
+        }
         Map<String, String> paramsMap = new HashMap<String, String>();
         if (transformParameters != null) {
             String params[] = transformParameters.split(",");
             for (int i = 0; i < params.length; i += 2) {
                 paramsMap.put(params[i], params[i + 1]);
             }
-            itemWriter.setTransform(Format.valueOf(format.toUpperCase()), transformName, paramsMap);
+            //itemWriter.setTransform(Format.valueOf(format.toUpperCase()), transformName, paramsMap);
         }
 
+
         return stepBuilderFactory.get("step1")
-                .<Map<String, Object>, DocumentWriteOperation>chunk(10)
+                .<Map<String, Object>, Map<String, Object>>chunk(10)
                 .reader(reader)
-                .processor(itemProcessor)
-                .writer(itemWriter)
+                .processor(new PathAwareColumnMapProcessor())
+                .writer(writer)
                 .build();
     }
 

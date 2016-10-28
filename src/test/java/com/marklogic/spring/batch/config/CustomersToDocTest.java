@@ -64,6 +64,13 @@ public class CustomersToDocTest extends AbstractRowToDocTest {
     }
 
     @Test
+    public void transferSingleCustomerRowToMarkLogic() {
+        String sql = "SELECT customer.* FROM customer WHERE customer.id = 0";
+        runRowToDoc(sql, "xml", "customer", "customer");
+        clientTestHelper.assertCollectionSize("Expecting 1 customer docs", "customer", 1);
+    }
+
+    @Test
     public void transferCustomerTableToMarkLogic() {
         String sql = "SELECT customer.* FROM customer";
         runRowToDoc(sql, "xml", "customer", "customer");
