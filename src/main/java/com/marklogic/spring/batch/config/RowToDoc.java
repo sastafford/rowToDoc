@@ -58,7 +58,7 @@ public class RowToDoc implements OptionParserConfigurer {
             StepBuilderFactory stepBuilderFactory,
             DatabaseClientProvider databaseClientProvider,
             @Value("#{jobParameters['sql']}") String sql,
-            @Value("#{jobParameters['format']}") String format,
+            @Value("#{jobParameters['format'] ?: 'xml'}") String format,
             @Value("#{jobParameters['root_local_name']}") String rootLocalName,
             @Value("#{jobParameters['collections']}") String[] collections,
             @Value("#{jobParameters['transform_name']}") String transformName,
@@ -76,7 +76,7 @@ public class RowToDoc implements OptionParserConfigurer {
             itemProcessor.setColumnMapSerializer(new JsonColumnMapSerializer());
         }
         itemProcessor.setRootElementName(rootLocalName);
-        //itemProcessor.setCollections
+        itemProcessor.setCollections(collections);
 
         MarkLogicItemWriter itemWriter = new MarkLogicItemWriter(databaseClientProvider.getDatabaseClient());
         Map<String, String> paramsMap = new HashMap<String, String>();
@@ -85,9 +85,8 @@ public class RowToDoc implements OptionParserConfigurer {
             for (int i = 0; i < params.length; i += 2) {
                 paramsMap.put(params[i], params[i + 1]);
             }
+            itemWriter.setTransform(Format.valueOf(format.toUpperCase()), transformName, paramsMap);
         }
-        itemWriter.setTransform(Format.valueOf(format.toUpperCase()), transformName, paramsMap);
-
 
         return stepBuilderFactory.get("step1")
                 .<Map<String, Object>, DocumentWriteOperation>chunk(10)

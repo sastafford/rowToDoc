@@ -12,8 +12,6 @@ import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.batch.item.ExecutionContext;
-import org.springframework.batch.item.database.JdbcCursorItemReader;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.Resource;
 import org.springframework.jdbc.datasource.embedded.EmbeddedDatabase;
@@ -22,8 +20,6 @@ import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseType;
 
 import javax.sql.DataSource;
 import java.io.IOException;
-import java.util.Map;
-
 
 /**
  * Handling data as a column map is perfect for a POC-style project where it's far more important to quickly get data
@@ -38,41 +34,43 @@ import java.util.Map;
  * <li>Write merged rows as a single document to MarkLogic, with or without nested elements</li>
  * </ol>
  */
-public class CustomersToDocTest extends AbstractJobTest {
+public class CustomersToDocTest extends AbstractRowToDocTest {
 
-    protected static EmbeddedDatabase embeddedDatabase;
     protected final Logger logger = LoggerFactory.getLogger(getClass());
     private TransformExtensionsManager transMgr;
     private String sql = "SELECT customer.*, invoice.id as \"invoice/id\", invoice.total as \"invoice/total\" FROM invoice LEFT JOIN customer on invoice.customerId = customer.id ORDER BY customer.id";
 
     @Before
-    public void createDb() throws IOException {
-        EmbeddedDatabaseBuilder builder = new EmbeddedDatabaseBuilder().setType(EmbeddedDatabaseType.HSQL);
-        builder.addScripts("db/sampledata_ddl.sql", "db/sampledata_insert.sql");
-        embeddedDatabase = builder.build();
+    public void setup() throws IOException {
+        createInMemoryDatabase("db/sampledata_ddl.sql", "db/sampledata_insert.sql");
 
+        clientTestHelper.setDatabaseClientProvider(getClientProvider());
+/*
         Resource transform = getApplicationContext().getResource("classpath:/transforms/simple.xqy");
         transMgr = getClient().newServerConfigManager().newTransformExtensionsManager();
         FileHandle fileHandle = new FileHandle(transform.getFile());
         fileHandle.setFormat(Format.XML);
         transMgr.writeXQueryTransform("simple", fileHandle);
+  */
+    }
+
+    @After
+    public void teardown() {
+        if (embeddedDatabase != null) {
+            embeddedDatabase.shutdown();
+        }
+        embeddedDatabase = null;
+//        transMgr.deleteTransform("simple");
     }
 
     @Test
-    public void jdbcCursorItemReaderTest() throws Exception {
-        JdbcCursorItemReader<Map<String, Object>> reader = new JdbcCursorItemReader<>();
-        reader.setDataSource(embeddedDatabase);
-        reader.setRowMapper(new PathAwareColumnMapRowMapper());
-        String sql = "SELECT customer.id as \"customer/ID\" FROM customer";
-        reader.setSql(sql);
-        reader.open(new ExecutionContext());
-
-        Map<String, Object> row = reader.read();
-        for (String key : row.keySet()) {
-            logger.info(key);
-            //logger.info(Integer.toString((Map<String, Object>)row.get(key)));
-        }
+    public void transferCustomerTableToMarkLogic() {
+        String sql = "SELECT customer.* FROM customer";
+        runRowToDoc(sql, "xml", "customer", "customer");
+        clientTestHelper.assertCollectionSize("Expecting 50 customer docs", "customer", 50);
     }
+
+
 
     @Test
     public void runRowToDocJobWithTransformTest() {
@@ -98,15 +96,6 @@ public class CustomersToDocTest extends AbstractJobTest {
         XMLDocumentManager mgr = getClient().newXMLDocumentManager();
         String xml = mgr.read("/invoice/13.xml", new StringHandle()).get();
         return parse(xml);
-    }
-
-    @After
-    public void teardown() {
-        if (embeddedDatabase != null) {
-            embeddedDatabase.shutdown();
-        }
-        embeddedDatabase = null;
-        transMgr.deleteTransform("simple");
     }
 
     @Configuration

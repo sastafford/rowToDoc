@@ -12,10 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.batch.item.ItemProcessor;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public class RowToDocItemProcessor implements ItemProcessor<Map<String, Object>, DocumentWriteOperation> {
 
@@ -23,6 +20,12 @@ public class RowToDocItemProcessor implements ItemProcessor<Map<String, Object>,
     private ColumnMapSerializer columnMapSerializer;
     private ColumnMapMerger columnMapMerger;
     private String rootElementName;
+
+    public void setCollections(String[] collections) {
+        this.collections = collections;
+    }
+
+    private String[] collections;
 
     // Internal state
     private Map<Object, Map<String, Object>> recordMap = new HashMap<>();
@@ -63,6 +66,7 @@ public class RowToDocItemProcessor implements ItemProcessor<Map<String, Object>,
     private DocumentWriteOperation rowToMarkLogicItemWriter(Set<Object> idsToIgnore) {
         MarkLogicWriteHandle handle = null;
         DocumentMetadataHandle metadata = new DocumentMetadataHandle();
+        metadata.withCollections(collections);
         Set<Object> recordIds = recordMap.keySet();
         Set<Object> idsToRemove = new HashSet<>();
         for (Object id : recordIds) {
