@@ -34,12 +34,22 @@ dependencies {
 
 mainClassName = "com.marklogic.spring.batch.Main"
 
-task runManager(type: JavaExec) {
+task customersDatabase(type: JavaExec) {
     classpath = configurations.runtime
     main = "org.hsqldb.util.DatabaseManagerSwing"
     args = [
             "--driver", "org.hsqldb.jdbc.JDBCDriver",
-            "--url", "jdbc:hsqldb:file:data/invoices",
+            "--url", "jdbc:hsqldb:file:data/customers",
+            "--user", "SA"
+    ]
+}
+
+task usersDatabase(type: JavaExec) {
+    classpath = configurations.runtime
+    main = "org.hsqldb.util.DatabaseManagerSwing"
+    args = [
+            "--driver", "org.hsqldb.jdbc.JDBCDriver",
+            "--url", "jdbc:hsqldb:file:data/users",
             "--user", "SA"
     ]
 }
