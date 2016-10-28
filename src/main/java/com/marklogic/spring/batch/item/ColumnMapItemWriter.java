@@ -3,7 +3,9 @@ package com.marklogic.spring.batch.item;
 import com.marklogic.client.DatabaseClient;
 import com.marklogic.client.document.DocumentWriteSet;
 import com.marklogic.client.document.GenericDocumentManager;
+import com.marklogic.client.document.ServerTransform;
 import com.marklogic.client.io.DocumentMetadataHandle;
+import com.marklogic.client.io.Format;
 import com.marklogic.client.io.StringHandle;
 import com.marklogic.spring.batch.columnmap.ColumnMapMerger;
 import com.marklogic.spring.batch.columnmap.ColumnMapSerializer;
@@ -16,6 +18,7 @@ import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemStream;
 import org.springframework.batch.item.ItemStreamException;
 import org.springframework.batch.item.ItemWriter;
+import sun.net.www.content.text.Generic;
 
 import java.util.*;
 
@@ -34,12 +37,18 @@ public class ColumnMapItemWriter implements ItemWriter<Map<String, Object>>, Ite
     private ColumnMapSerializer columnMapSerializer;
     private ColumnMapMerger columnMapMerger;
     private String rootElementName;
+    private ServerTransform serverTransform;
+    private Format format;
+    private boolean transformOn = false;
+    private DocumentMetadataHandle metadata;
 
     public void setMetadata(DocumentMetadataHandle metadata) {
         this.metadata = metadata;
     }
 
-    private DocumentMetadataHandle metadata;
+
+
+
 
     // Internal state
     private GenericDocumentManager mgr;
@@ -105,7 +114,12 @@ public class ColumnMapItemWriter implements ItemWriter<Map<String, Object>>, Ite
             if (logger.isDebugEnabled()) {
                 logger.debug("Writing set of documents");
             }
-            mgr.write(set);
+            if (!transformOn) {
+                mgr.write(set);
+            } else {
+                mgr.write(set, serverTransform);
+            }
+
             if (logger.isDebugEnabled()) {
                 logger.debug("Finished writing set of documents");
             }
@@ -167,5 +181,17 @@ public class ColumnMapItemWriter implements ItemWriter<Map<String, Object>>, Ite
 
     public void setColumnMapMerger(ColumnMapMerger columnMapMerger) {
         this.columnMapMerger = columnMapMerger;
+    }
+
+    public void setTransform(Format format, String transformName, Map<String, String> transformParameters) {
+        this.format = format;
+        mgr.setContentFormat(format);
+        this.serverTransform = new ServerTransform(transformName);
+        if (transformParameters != null) {
+            for (String key : transformParameters.keySet()) {
+                serverTransform.put(key, transformParameters.get(key));
+            }
+        }
+        transformOn = true;
     }
 }

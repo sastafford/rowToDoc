@@ -44,13 +44,18 @@ public abstract class AbstractRowToDocTest extends AbstractJobTest {
 
     }
 
-    protected void runRowToDocWithTransform(String sql, String format, String rootName) {
+    protected void runRowToDocWithTransform(String sql, String format,
+                                            String rootName, String transformName,
+                                            String collections,
+                                            String transformParameters) {
         runJob(RowToDocTest.class,
                 "--sql", sql,
                 "--jdbc_username", "sa",
                 "--format", format,
                 "--root_local_name", rootName,
-                "--collections", "invoice"
+                "--collections", collections,
+                "--transform_name", transformName,
+                "--transform_parameters", transformParameters
         );
 
     }

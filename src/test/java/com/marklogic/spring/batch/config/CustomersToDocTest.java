@@ -6,7 +6,6 @@ import com.marklogic.client.io.FileHandle;
 import com.marklogic.client.io.Format;
 import com.marklogic.client.io.StringHandle;
 import com.marklogic.junit.Fragment;
-import com.marklogic.spring.batch.test.AbstractJobTest;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -14,9 +13,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.Resource;
-import org.springframework.jdbc.datasource.embedded.EmbeddedDatabase;
-import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseBuilder;
-import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseType;
 
 import javax.sql.DataSource;
 import java.io.IOException;
@@ -77,18 +73,21 @@ public class CustomersToDocTest extends AbstractRowToDocTest {
         clientTestHelper.assertCollectionSize("Expecting 50 customer docs", "customer", 50);
     }
 
-
+    @Test
+    public void transferCustomersWithInvoicesTest() {
+        String sql = "SELECT customer.*, invoice.id as \"invoice/id\", invoice.total as \"invoice/total\" FROM invoice LEFT JOIN customer on invoice.customerId = customer.id ORDER BY customer.id";
+        runRowToDoc(sql, "xml", "invoice", "invoice");
+        Fragment f = loadInvoice();
+        f.assertElementValue("/invoice/ID", "13");
+        f.assertElementValue("/invoice/LASTNAME", "Ringer");
+        f.assertElementExists("/invoice/invoice[1]/total[. = '3215']");
+        f.assertElementExists("/invoice/invoice[2]/total[. = '1376']");
+    }
 
     @Test
-    public void runRowToDocJobWithTransformTest() {
-        runJob(RowToDocTest.class,
-                "--sql", "SELECT customer.*, invoice.id as \"invoice/id\", invoice.total as \"invoice/total\" FROM invoice LEFT JOIN customer on invoice.customerId = customer.id ORDER BY customer.id",
-                "--jdbc_username", "sa",
-                "--format", "xml",
-                "--root_local_name", "invoice",
-                "--collections", "invoice",
-                "--transform_name", "simple",
-                "--transform_parameters", "monster,grover,trash,oscar");
+    public void transferCustomersWithInvoicesAndTransformTest() {
+        String sql = "SELECT customer.*, invoice.id as \"invoice/id\", invoice.total as \"invoice/total\" FROM invoice LEFT JOIN customer on invoice.customerId = customer.id ORDER BY customer.id";
+        runRowToDocWithTransform(sql, "xml", "invoice", "invoice", "simple", "monster,grover,trash,oscar");
         Fragment f = loadInvoice();
         f.assertElementValue("/invoice/invoice/ID", "13");
         f.assertElementValue("/invoice/invoice/LASTNAME", "Ringer");
