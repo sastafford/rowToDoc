@@ -5,7 +5,7 @@ plugins {
 }
 
 group 'com.marklogic.spring.batch'
-version '1.0-SNAPSHOT'
+version '0.0.1'
 
 sourceCompatibility = 1.7
 
@@ -34,22 +34,15 @@ dependencies {
 
 mainClassName = "com.marklogic.spring.batch.Main"
 
+
+// This task is for running the examples
+
 task customersDatabase(type: JavaExec) {
     classpath = configurations.runtime
     main = "org.hsqldb.util.DatabaseManagerSwing"
     args = [
             "--driver", "org.hsqldb.jdbc.JDBCDriver",
             "--url", "jdbc:hsqldb:file:data/customers",
-            "--user", "SA"
-    ]
-}
-
-task usersDatabase(type: JavaExec) {
-    classpath = configurations.runtime
-    main = "org.hsqldb.util.DatabaseManagerSwing"
-    args = [
-            "--driver", "org.hsqldb.jdbc.JDBCDriver",
-            "--url", "jdbc:hsqldb:file:data/users",
             "--user", "SA"
     ]
 }
