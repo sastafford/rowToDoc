@@ -12,7 +12,7 @@ The best way to learn rowToDoc is by example.
 
 ## Setup for examples
 
-1. Download [rowToDoc]()
+1. Download [rowToDoc-(version).zip](https://github.com/sastafford/rowToDoc/releases)
 2. Unzip the rowToDoc zip file on your local machine
 
 ### Setup [HSQL](http://hsqldb.org/)
@@ -49,7 +49,7 @@ If you wish to uninstall the sample database and appserver at the conclusion of 
   
 # How do I use rowToDoc with a different database?
 
-  1) [Download rowToDoc]() and unzip to your target machine
+  1) [Download rowToDoc-(version).zip](https://github.com/sastafford/rowToDoc/releases) and unzip to your target machine
   2) Add the database specific JDBC jar to the rowToDoc/lib folder
   3) Open the start script under rowToDoc/bin and modfiy the CLASSPATH variable to include the jar file added in step 2
   
