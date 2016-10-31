@@ -28,6 +28,10 @@ dependencies {
     testCompile "com.marklogic:marklogic-spring-batch-test:" + msbVersion
     testCompile group: 'junit', name: 'junit', version: '4.11'
 
+    // For ReadUsersFromHsqlUsingUserWriterTest
+    testCompile "com.fasterxml.jackson.dataformat:jackson-dataformat-xml:2.6.3"
+    testRuntime "org.codehaus.woodstox:woodstox-core-asl:4.4.1"
+
     runtime "com.marklogic:marklogic-spring-batch-core:" + msbVersion
     runtime "org.hsqldb:hsqldb:2.3.4"
 }
