@@ -11,6 +11,7 @@ import com.marklogic.spring.batch.config.AbstractRowToDocTest;
 import com.marklogic.spring.batch.user.User;
 import com.marklogic.spring.batch.user.UserRowMapper;
 import com.marklogic.spring.batch.user.UserWriter;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.springframework.batch.core.Job;
@@ -37,6 +38,11 @@ public class ReadUsersFromHsqlUsingUserWriterTest extends AbstractRowToDocTest {
     public void setup() {
 
         createInMemoryDatabase("db/create-users-db.sql", "db/insert-hundred-users.sql");
+    }
+
+    @After
+    public void teardown() {
+        shutdownInMemoryDatabase();
     }
 
     @Test
