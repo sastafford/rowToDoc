@@ -2,8 +2,6 @@
 
 In this example, we are reading from a single table, transforming each row to a document, and loading directly into MarkLogic
 
-## Rows
-
 Open HSQL Database
 
     gradle customerDatabase

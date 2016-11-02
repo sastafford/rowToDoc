@@ -95,6 +95,20 @@ public class CustomersToDocTest extends AbstractRowToDocTest {
         f.assertElementExists("/invoice/trash[. = 'oscar']");
     }
 
+    @Test
+    public void transferCustomersWithInvoicesAndTransformWithoutTransformParamsTest() {
+        String sql = "SELECT customer.*, invoice.id as \"invoice/id\", invoice.total as \"invoice/total\" FROM invoice LEFT JOIN customer on invoice.customerId = customer.id ORDER BY customer.id";
+        runRowToDocWithTransformAndNoTransformParams(sql, "xml", "invoice", "invoice", "simple");
+        Fragment f = loadInvoice();
+        f.assertElementValue("/invoice/invoice/ID", "13");
+        f.assertElementValue("/invoice/invoice/LASTNAME", "Ringer");
+        f.assertElementExists("/invoice/invoice/invoice[1]/total[. = '3215']");
+        f.assertElementExists("/invoice/invoice/invoice[2]/total[. = '1376']");
+        f.assertElementExists("/invoice/transform");
+        f.assertElementMissing("Monster element expected to be missing", "/invoice/monster[. = 'grover']");
+        f.assertElementMissing("trash element expected to be missing", "/invoice/trash[. = 'oscar']");
+    }
+
     private Fragment loadInvoice() {
         XMLDocumentManager mgr = getClient().newXMLDocumentManager();
         String xml = mgr.read("/invoice/13.xml", new StringHandle()).get();
