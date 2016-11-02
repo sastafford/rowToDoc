@@ -43,16 +43,17 @@ If you wish to uninstall the sample database and appserver at the conclusion of 
     gradle mlUndeploy
 
 ## Run the Examples
-
+    
   * [Create one document per table row](./example_1.md)
   * [Create one document for multiple joined rows](./example_2.md)
   
 # How do I use rowToDoc with a different database?
 
-  1) [Download rowToDoc-(version).zip](https://github.com/sastafford/rowToDoc/releases) and unzip to your target machine
-  2) Add the database specific JDBC jar to the rowToDoc/lib folder
-  3) Open the start script under rowToDoc/bin and modfiy the CLASSPATH variable to include the jar file added in step 2
-  
+   1. [Download rowToDoc-(version).zip](https://github.com/sastafford/rowToDoc/releases) and unzip to your target machine
+   2. Add the database specific JDBC jar to the rowToDoc/lib folder  
+   3. Open the start script under rowToDoc/bin and modfiy the CLASSPATH variable to include the jar file added in step 2
+
 # Acknowledgments
 
- * [Rob Rudin](http://github.com/rjrudin)
+ * [rjrudin](http://github.com/rjrudin) wrote most of the guts of this code.  
+ * [sheilams](https://github.com/sheilams) for providing validation and verification. 

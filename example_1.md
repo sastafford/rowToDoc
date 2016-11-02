@@ -4,7 +4,7 @@ In this example, we are reading from a single table, transforming each row to a 
 
 Open HSQL Database
 
-    gradle customerDatabase
+    gradle customersDatabase
     
 1. SQL = SELECT * FROM CUSTOMER
 2. Execute SQL

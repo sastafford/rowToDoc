@@ -93,8 +93,16 @@ Make sure to close your HSQL Database Manager to release any database locks.
       * Note the escape slashes on the quotation marks.  These are needed since this is a Java program
 4. Set the transform parameters
     * --format xml 
-    * --root_local_name customer 
+        * REQUIRED
+    * --root_local_name customer
+        * REQUIRED
     * --collections customer
+        * OPTIONAL
+    * --transform_name 
+        * OPTIONAL - requires a [REST API transform](http://docs.marklogic.com/guide/rest-dev/transforms) to be loaded
+    * --transform_parameters
+        * OPTIONAL - a comma separated string of key values pairs 
+        * i.e. "key1,value1,key2,value2,...,keyN,valueN"
 5. Set the MarkLogic parameters.  Change these as appropriate.  
     * --host localhost
     * --port 8155 
