@@ -60,6 +60,20 @@ public abstract class AbstractRowToDocTest extends AbstractJobTest {
 
     }
 
+    protected void runRowToDocWithTransformAndNoTransformParams(String sql, String format,
+                                            String rootName, String collections,
+                                            String transformName) {
+        runJob(RowToDocTest.class,
+                "--sql", sql,
+                "--jdbc_username", "sa",
+                "--format", format,
+                "--root_local_name", rootName,
+                "--collections", collections,
+                "--transform_name", transformName
+        );
+
+    }
+
     /**
      * With our embedded HSQL database, there's not a way that I know of for building a JDBC connection string for it.
      * So we override this method in the config class that we're testing to inject our own data source.
