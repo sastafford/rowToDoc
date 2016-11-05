@@ -1,6 +1,7 @@
 package com.marklogic.spring.batch.columnmap;
 
 import com.marklogic.client.helper.LoggingObject;
+import org.springframework.stereotype.Service;
 
 import javax.xml.stream.XMLOutputFactory;
 import javax.xml.stream.XMLStreamException;
@@ -13,6 +14,7 @@ import java.util.Map;
  * Default implementation that uses the Stax library to create an XML structure. Any XML library, or even a templating
  * engine like Velocity/Freemarker, could be used here instead.
  */
+@Service("staxColumnMapSerializer")
 public class DefaultStaxColumnMapSerializer extends LoggingObject implements ColumnMapSerializer {
 
     private XMLOutputFactory xmlOutputFactory;
@@ -40,9 +42,9 @@ public class DefaultStaxColumnMapSerializer extends LoggingObject implements Col
      * Recursive function that will call itself when it finds that the value of a key/value pair in the column map is a
      * Map<String, Object> itself.
      * 
-     * @param columnMap
-     * @param sw
-     * @throws XMLStreamException
+     * @param columnMap the column map
+     * @param sw the stream writer
+     * @throws XMLStreamException when it fails
      */
     private void writeColumnMap(Map<String, Object> columnMap, XMLStreamWriter sw) throws XMLStreamException {
         for (String key : columnMap.keySet()) {

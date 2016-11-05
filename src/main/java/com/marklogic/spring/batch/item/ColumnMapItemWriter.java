@@ -9,17 +9,14 @@ import com.marklogic.client.io.Format;
 import com.marklogic.client.io.StringHandle;
 import com.marklogic.spring.batch.columnmap.ColumnMapMerger;
 import com.marklogic.spring.batch.columnmap.ColumnMapSerializer;
-import com.marklogic.spring.batch.columnmap.DefaultColumnMapMerger;
-import com.marklogic.spring.batch.columnmap.DefaultStaxColumnMapSerializer;
-import com.marklogic.spring.batch.item.AbstractDocumentWriter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.batch.item.ExecutionContext;
-import org.springframework.batch.item.ItemStream;
-import org.springframework.batch.item.ItemStreamException;
 import org.springframework.batch.item.ItemWriter;
-import sun.net.www.content.text.Generic;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.stereotype.Component;
 
+import javax.annotation.PostConstruct;
 import java.util.*;
 
 /**
@@ -29,34 +26,39 @@ import java.util.*;
  * <li>Provide a strategy interface for generating XML element names based on column names.</li>
  * </ol>
  */
-public class ColumnMapItemWriter implements ItemWriter<Map<String, Object>>, ItemStream {
+@Component("columnMapItemWriter")
+public class ColumnMapItemWriter implements ItemWriter<Map<String, Object>> {
 
     protected final Logger logger = LoggerFactory.getLogger(getClass());
 
-    // Configurable
-    private ColumnMapSerializer columnMapSerializer;
-    private ColumnMapMerger columnMapMerger;
+    //
+    // Where possible use read-only elements so we can run this in a
+    // threaded environment like an async executor.
+    //
     private String rootElementName;
     private ServerTransform serverTransform;
     private Format format;
     private boolean transformOn = false;
     private DocumentMetadataHandle metadata;
 
+    @Autowired
+    @Qualifier("staxColumnMapSerializer")
+    private ColumnMapSerializer columnMapSerializer;
+
+    @Autowired
+    private DatabaseClient databaseClient;
+
     public void setMetadata(DocumentMetadataHandle metadata) {
         this.metadata = metadata;
     }
 
-
-
-
-
     // Internal state
     private GenericDocumentManager mgr;
-    private Map<Object, Map<String, Object>> recordMap = new HashMap<>();
 
-    public ColumnMapItemWriter(DatabaseClient client, String rootElementName) {
-        this.mgr = client.newDocumentManager();
-        this.rootElementName = rootElementName;
+    @PostConstruct
+    public void postConstruct() {
+        this.mgr = databaseClient.newDocumentManager();
+        this.rootElementName = "item";
     }
 
     /**
@@ -67,64 +69,31 @@ public class ColumnMapItemWriter implements ItemWriter<Map<String, Object>>, Ite
      */
     @Override
     public void write(List<? extends Map<String, Object>> items) throws Exception {
-        Set<Object> idsToIgnore = new HashSet<>();
-        for (Map<String, Object> columnMap : items) {
-            String idKey = columnMap.keySet().iterator().next();
-            Object id = columnMap.get(idKey);
-            idsToIgnore.add(id);
-            Map<String, Object> existingColumnMap = recordMap.get(id);
-            if (existingColumnMap != null && columnMapMerger != null) {
-                columnMapMerger.mergeColumnMaps(existingColumnMap, columnMap);
-            } else {
-                recordMap.put(id, columnMap);
-            }
-        }
-        writeRecords(idsToIgnore);
-    }
-
-    private void writeRecords(Set<Object> idsToIgnore) {
         DocumentWriteSet set = mgr.newWriteSet();
-        Set<Object> recordIds = recordMap.keySet();
-        Set<Object> idsToRemove = new HashSet<>();
-        for (Object id : recordIds) {
-            if (idsToIgnore == null || !idsToIgnore.contains(id)) {
-                Map<String, Object> columnMap = recordMap.get(id);
-                try {
-                    if (logger.isDebugEnabled()) {
-                        logger.debug("Writing record: " + columnMap);
-                    }
-                    String content = columnMapSerializer.serializeColumnMap(columnMap, this.rootElementName, null);
-                    String uri = generateUri(content, id);
-                    set.add(uri, metadata, new StringHandle(content));
-                    if (logger.isDebugEnabled()) {
-                        logger.debug("Writing URI: " + uri + "; content: " + content);
-                    }
-                    idsToRemove.add(id);
-                } catch (Exception ex) {
-                    throw new RuntimeException(ex);
-                }
-            } else {
-                if (logger.isDebugEnabled()) {
-                    logger.debug("Ignoring ID for now: " + id);
-                }
-            }
-        }
 
-        if (!set.isEmpty()) {
-            if (logger.isDebugEnabled()) {
+        for (Map<String, Object> columnMap : items) {
+            try {
+                logger.debug("Writing record: " + columnMap);
+                String content = columnMapSerializer.serializeColumnMap(columnMap, this.rootElementName, null);
+                String uri = generateUri(content);
+
+                set.add(uri, metadata, new StringHandle(content));
+                logger.debug("Writing URI: " + uri + "; content: " + content);
+            } catch (Exception ex) {
+                throw new RuntimeException(ex);
+            }
+
+            if (!set.isEmpty()) {
                 logger.debug("Writing set of documents");
-            }
-            if (!transformOn) {
-                mgr.write(set);
-            } else {
-                mgr.write(set, serverTransform);
-            }
-
-            if (logger.isDebugEnabled()) {
+                if (!transformOn) {
+                    mgr.write(set);
+                } else {
+                    mgr.write(set, serverTransform);
+                }
                 logger.debug("Finished writing set of documents");
             }
+
         }
-        recordIds.removeAll(idsToRemove);
     }
 
     /**
@@ -134,53 +103,16 @@ public class ColumnMapItemWriter implements ItemWriter<Map<String, Object>>, Ite
      * itself.
      *
      * @param content
-     * @param id
      * @return
      */
-    protected String generateUri(String content, Object id) {
-        String uri = "/" + this.rootElementName + "/" + id;
+    protected String generateUri(String content) {
+        String uri = String.format("/%s/%s", this.rootElementName, UUID.randomUUID().toString());
         if (content.startsWith("{")) {
             return uri += ".json";
         } else if (content.startsWith("<")) {
             return uri += ".xml";
         }
         return uri;
-    }
-
-    @Override
-    public void open(ExecutionContext executionContext) {
-        if (columnMapSerializer == null) {
-            columnMapSerializer = new DefaultStaxColumnMapSerializer();
-        }
-
-        if (columnMapMerger == null) {
-            columnMapMerger = new DefaultColumnMapMerger();
-        }
-    }
-
-    @Override
-    public void update(ExecutionContext executionContext) throws ItemStreamException {
-
-    }
-
-    /**
-     * This close method from ItemStream gives us a way to write all the remaining records in our map after all the rows
-     * have been read from the SQL database.
-     */
-    @Override
-    public void close() throws ItemStreamException {
-        if (logger.isDebugEnabled()) {
-            logger.debug("Closing Writer, and writing remaining records");
-        }
-        writeRecords(null);
-    }
-
-    public void setColumnMapSerializer(ColumnMapSerializer columnMapSerializer) {
-        this.columnMapSerializer = columnMapSerializer;
-    }
-
-    public void setColumnMapMerger(ColumnMapMerger columnMapMerger) {
-        this.columnMapMerger = columnMapMerger;
     }
 
     public void setTransform(Format format, String transformName, Map<String, String> transformParameters) {
@@ -193,5 +125,17 @@ public class ColumnMapItemWriter implements ItemWriter<Map<String, Object>>, Ite
             }
         }
         transformOn = true;
+    }
+
+    public void setColumnMapSerializer(ColumnMapSerializer columnMapSerializer) {
+        this.columnMapSerializer = columnMapSerializer;
+    }
+
+    public void setDatabaseClient(DatabaseClient databaseClient) {
+        this.databaseClient = databaseClient;
+    }
+
+    public void setRootLocalName(String rootLocalName) {
+        this.rootElementName = rootLocalName;
     }
 }

@@ -2,9 +2,11 @@ package com.marklogic.spring.batch.columnmap;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.stereotype.Component;
 
 import java.util.Map;
 
+@Component("jsonColumnMapSerializer")
 public class JsonColumnMapSerializer implements ColumnMapSerializer {
 
     private ObjectMapper mapper = new ObjectMapper();

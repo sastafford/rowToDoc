@@ -1,10 +1,12 @@
 package com.marklogic.spring.batch.config;
 
-import com.marklogic.client.document.DocumentWriteOperation;
+import com.marklogic.client.DatabaseClient;
 import com.marklogic.client.helper.DatabaseClientProvider;
 import com.marklogic.client.io.DocumentMetadataHandle;
 import com.marklogic.client.io.Format;
 import com.marklogic.spring.batch.Options;
+import com.marklogic.spring.batch.columnmap.ColumnMapSerializer;
+import com.marklogic.spring.batch.columnmap.DefaultStaxColumnMapSerializer;
 import com.marklogic.spring.batch.columnmap.JsonColumnMapSerializer;
 import com.marklogic.spring.batch.item.PathAwareColumnMapProcessor;
 import com.marklogic.spring.batch.config.support.OptionParserConfigurer;
@@ -13,20 +15,25 @@ import joptsimple.OptionParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.batch.core.Job;
+import org.springframework.batch.core.JobParameters;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
 import org.springframework.batch.core.configuration.annotation.JobBuilderFactory;
 import org.springframework.batch.core.configuration.annotation.JobScope;
 import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
+import org.springframework.batch.item.ItemReader;
 import org.springframework.batch.item.database.JdbcCursorItemReader;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
 import org.springframework.jdbc.core.ColumnMapRowMapper;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 
+import javax.annotation.Resource;
 import javax.sql.DataSource;
 import java.util.HashMap;
 import java.util.Map;
@@ -35,12 +42,19 @@ import java.util.Map;
  * Configuration for a simple approach for migrating rows to documents via Spring JDBC ColumnMaps.
  */
 @EnableBatchProcessing
+@ComponentScan(basePackages = {"com.marklogic.spring.batch.columnmap", "com.marklogic.spring.batch.item"})
 public class RowToDoc implements OptionParserConfigurer {
 
     @Autowired
     private Environment env;
 
+    @Resource(name="jsonColumnMapSerializer")
+    private ColumnMapSerializer jsonColumnMapSerializer;
+
     protected final Logger logger = LoggerFactory.getLogger(getClass());
+
+    @Resource(name="columnMapItemWriter")
+    private ColumnMapItemWriter writer;
 
     @Override
     public void configureOptionParser(OptionParser parser) {
@@ -56,10 +70,24 @@ public class RowToDoc implements OptionParserConfigurer {
     }
 
     @Bean
+    public DatabaseClient databaseClient(DatabaseClientProvider databaseClientProvider) {
+        return databaseClientProvider.getDatabaseClient();
+    }
+
+    public ItemReader<Map<String, Object>> reader(String sql) {
+        JdbcCursorItemReader<Map<String, Object>> reader = new JdbcCursorItemReader<>();
+
+        reader.setDataSource(buildDataSource());
+        reader.setRowMapper(new ColumnMapRowMapper());
+        reader.setSql(sql);
+
+        return reader;
+    }
+
+    @Bean
     @JobScope
     public Step step1(
             StepBuilderFactory stepBuilderFactory,
-            DatabaseClientProvider databaseClientProvider,
             @Value("#{jobParameters['sql']}") String sql,
             @Value("#{jobParameters['format'] ?: 'xml'}") String format,
             @Value("#{jobParameters['root_local_name']}") String rootLocalName,
@@ -67,24 +95,25 @@ public class RowToDoc implements OptionParserConfigurer {
             @Value("#{jobParameters['transform_name'] ?: ''}") String transformName,
             @Value("#{jobParameters['transform_parameters'] ?: ''}") String transformParameters) {
 
-        DataSource dataSource = buildDataSource();
-
-        JdbcCursorItemReader<Map<String, Object>> reader = new JdbcCursorItemReader<>();
-        reader.setDataSource(dataSource);
-        reader.setRowMapper(new ColumnMapRowMapper());
-        reader.setSql(sql);
-
-        ColumnMapItemWriter writer = new ColumnMapItemWriter(databaseClientProvider.getDatabaseClient(), rootLocalName);
         DocumentMetadataHandle metadata = new DocumentMetadataHandle();
         if (collections == null || collections.length == 0) {
             String[] coll = {rootLocalName};
             metadata.withCollections(coll);
         } else {
             metadata.withCollections(collections);
+            logger.debug("Setting collections to: " + String.join(",", collections));
         }
+
         if ("json".equals(format)) {
-            writer.setColumnMapSerializer(new JsonColumnMapSerializer());
+            writer.setColumnMapSerializer(jsonColumnMapSerializer);
+            logger.debug("Setting output to json");
         }
+
+        if (!rootLocalName.isEmpty()) {
+            writer.setRootLocalName(rootLocalName);
+            logger.debug("Setting root local name to :" + rootLocalName);
+        }
+
         if (!transformName.isEmpty()) {
             Map<String, String> paramsMap = new HashMap<String, String>();
             if (!transformParameters.isEmpty()) {
@@ -95,12 +124,13 @@ public class RowToDoc implements OptionParserConfigurer {
             }
 
             writer.setTransform(Format.valueOf(format.toUpperCase()), transformName, paramsMap);
+            logger.debug(String.format("Setting transform to %s with parameters (%s)", transformName, transformParameters));
         }
         writer.setMetadata(metadata);
 
         return stepBuilderFactory.get("step1")
                 .<Map<String, Object>, Map<String, Object>>chunk(10)
-                .reader(reader)
+                .reader(reader(sql))
                 .processor(new PathAwareColumnMapProcessor())
                 .writer(writer)
                 .build();

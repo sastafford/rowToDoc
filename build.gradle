@@ -7,7 +7,7 @@ plugins {
 group 'com.marklogic.spring.batch'
 version '0.0.2'
 
-sourceCompatibility = 1.7
+sourceCompatibility = 1.8
 
 ext {
     msbVersion = '0.7.4'
@@ -20,10 +20,16 @@ repositories {
     mavenLocal()
 }
 
+configurations {
+    all*.exclude group: "commons-logging", module: "commons-logging"
+}
+
 dependencies {
     compile "com.marklogic:java-client-api:4.0.0-EA3"
     compile "com.marklogic:marklogic-spring-batch-core:" + msbVersion
-    compile "org.slf4j:slf4j-api:1.7.21"
+    compile "org.slf4j:jcl-over-slf4j:1.7.21"
+    compile "ch.qos.logback:logback-classic:1.1.7"
+    compile "postgresql:postgresql:9.1-901.jdbc3"
 
     testCompile "com.marklogic:marklogic-spring-batch-test:" + msbVersion
     testCompile group: 'junit', name: 'junit', version: '4.11'
